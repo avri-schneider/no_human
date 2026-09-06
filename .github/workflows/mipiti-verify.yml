@@ -47,13 +47,20 @@ jobs:
           web/src/markdownSafety.test.mjs
 
       # The action (a Docker container) signs the attestation INTO .mipiti/ in
-      # the workspace; pre-create it world-writable so the container's user can
-      # write regardless of its UID vs. the runner's.
+      # the workspace; the dir is still a bare mkdir under project-root in
+      # v0.53.0 (attestation.py ATTESTATION_DIR), owned by the runner uid, so
+      # pre-create it world-writable for the container's `verifier` user. Drop
+      # this once mipiti-verify 0.53.1 ships PR 389's MIPITI_ATTESTATION_DIR
+      # resolver (entrypoint redirects writes+reads under the container home).
       - run: mkdir -p .mipiti/attestations && chmod -R 0777 .mipiti
 
-      # The action signs a test attestation from the JUnit reports (writing it to
-      # .mipiti/attestations/), then verifies (Tier 1). It runs no tests itself.
-      - uses: Mipiti/mipiti-verify@d247e7f587fa1445d1dc96a81ca0cb279a93db15 # v0.52.0
+      # v0.53.0: production runs gate revision 3 — a runtime-class control whose
+      # only evidence is a test_attested citation is insufficient unless a
+      # structural sibling for the same mechanism also passes on that control.
+      # This version carries the catalogue awareness that check needs, and closes
+      # the --changed-files skip (#385). It signs a test attestation from the
+      # JUnit reports, then verifies (Tier 1). It runs no tests itself.
+      - uses: Mipiti/mipiti-verify@49e2f62a4afb86e94cb4be41c9b0be043885ee04 # v0.53.0
         with:
           api-key: ${{ secrets.MIPITI_API_KEY }}
           model-id: "71013aa0-a0c7-45dc-9a3d-998196400e4f"
