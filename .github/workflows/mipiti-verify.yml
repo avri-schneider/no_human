@@ -1,0 +1,55 @@
+name: mipiti-verify
+
+# Runs on THIS fork only (avri-schneider/no_human). Fork main is kept synced to
+# upstream's merged code, so the checkout's repo == git remote ==
+# GITHUB_REPOSITORY == avri-schneider/no_human — which is what the fork-bound
+# assertions require, and it carries the current code + tests. The job runs the
+# tests that back the behavioral assertions, emits JUnit, and hands the reports
+# to the mipiti-verify action: it signs a test attestation from them (tier1
+# `test_attested`), then verifies — it runs no tests itself.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write   # Sigstore OIDC signing for the test attestation
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: mipiti-verify        # holds MIPITI_API_KEY (environment secret)
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+        working-directory: web
+
+      # Python tests backing the CORS/Host/env-scrub assertions -> JUnit.
+      - run: >
+          uv run pytest -q --junitxml=py-junit.xml
+          tests/test_local_boundary_guard.py tests/test_child_env.py
+
+      # Board tests backing the CTRL-36 (markdown XSS) assertions -> JUnit.
+      - run: >
+          node --test --test-reporter=junit
+          --test-reporter-destination=board-junit.xml
+          web/src/markdownSafety.test.mjs
+
+      # The action signs a test attestation from the JUnit reports (writing it to
+      # .mipiti/attestations/), then verifies (Tier 1). It runs no tests itself.
+      - uses: Mipiti/mipiti-verify@d247e7f587fa1445d1dc96a81ca0cb279a93db15 # v0.52.0
+        with:
+          api-key: ${{ secrets.MIPITI_API_KEY }}
+          model-id: "71013aa0-a0c7-45dc-9a3d-998196400e4f"
+          junit-report: py-junit.xml board-junit.xml
