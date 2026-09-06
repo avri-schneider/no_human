@@ -59,9 +59,17 @@ jobs:
       # structural sibling for the same mechanism also passes on that control.
       # This version carries the catalogue awareness that check needs, and closes
       # the --changed-files skip (#385). It signs a test attestation from the
-      # JUnit reports, then verifies (Tier 1). It runs no tests itself.
+      # JUnit reports, then verifies (Tier 1 + Tier 2). It runs no tests itself.
+      #
+      # Tier 2 is the semantic check that moves a sufficient control from
+      # "implemented" to "verified". The provider key and model name are
+      # environment secrets on the `mipiti-verify` environment; the action hands
+      # the key only to the OpenAI SDK.
       - uses: Mipiti/mipiti-verify@49e2f62a4afb86e94cb4be41c9b0be043885ee04 # v0.53.0
         with:
           api-key: ${{ secrets.MIPITI_API_KEY }}
           model-id: "71013aa0-a0c7-45dc-9a3d-998196400e4f"
           junit-report: py-junit.xml board-junit.xml
+          tier2-provider: openai
+          tier2-model: ${{ secrets.MIPITI_TIER2_MODEL }}
+          tier2-api-key: ${{ secrets.OPENAI_API_KEY }}
