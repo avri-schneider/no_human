@@ -46,6 +46,11 @@ jobs:
           --test-reporter-destination=board-junit.xml
           web/src/markdownSafety.test.mjs
 
+      # The action (a Docker container) signs the attestation INTO .mipiti/ in
+      # the workspace; pre-create it world-writable so the container's user can
+      # write regardless of its UID vs. the runner's.
+      - run: mkdir -p .mipiti/attestations && chmod -R 0777 .mipiti
+
       # The action signs a test attestation from the JUnit reports (writing it to
       # .mipiti/attestations/), then verifies (Tier 1). It runs no tests itself.
       - uses: Mipiti/mipiti-verify@d247e7f587fa1445d1dc96a81ca0cb279a93db15 # v0.52.0
