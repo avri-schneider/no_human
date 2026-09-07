@@ -41,8 +41,15 @@ jobs:
       # MCP-schema, SQLi, plus the strict-CSP + clickjacking header test
       # (CTRL-20/21), the hostile-FTS5 search test (CTRL-45), the human-only
       # landing gate tests (CTRL-23) and the npm lockfile-pinning guard (CTRL-48).
+      #
+      # --cov-context=test records, per test, the src/no_human lines it executed.
+      # `coverage json --show-contexts` exports that, and the action passes it to
+      # `attest-tests --coverage`, so each test_attested carries the "reached"
+      # fact its mechanism binding is credited on (rather than "reached: unknown",
+      # which leaves the runtime clause to Tier 2 discretion).
       - run: >
           uv run pytest -q --junitxml=py-junit.xml
+          --cov=src/no_human --cov-context=test --cov-report=
           tests/test_local_boundary_guard.py tests/test_child_env.py
           tests/test_git.py::test_git_run_never_disables_ssh_host_key_verification
           tests/test_mcp_bridge_schema.py
@@ -52,6 +59,7 @@ jobs:
           tests/test_session_search.py::test_hostile_fts_input_never_500s
           tests/test_gate_at_the_act.py
           tests/test_npm_lockfile_pinning.py
+      - run: uv run coverage json --show-contexts -o coverage.json
 
       # Board tests backing the CTRL-36 (markdown XSS) assertions -> JUnit.
       - run: >
@@ -91,6 +99,7 @@ jobs:
           api-key: ${{ secrets.MIPITI_API_KEY }}
           model-id: ${{ vars.MIPITI_MODEL_ID }}
           junit-report: py-junit.xml board-junit.xml desktop-junit.xml
+          coverage-report: coverage.json
           tier2-provider: openai
           tier2-model: ${{ secrets.MIPITI_TIER2_MODEL }}
           tier2-api-key: ${{ secrets.OPENAI_API_KEY }}
