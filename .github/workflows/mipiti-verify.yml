@@ -56,6 +56,7 @@ jobs:
           node --test --test-reporter=junit
           --test-reporter-destination=desktop-junit.xml
           desktop/mainIpc.test.mjs
+          desktop/preloadTokenSafety.test.mjs
 
       # v0.53.1+: the action self-heals the attestation dir — its entrypoint
       # tries .mipiti/attestations under project-root and, when the checkout
