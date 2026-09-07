@@ -46,6 +46,15 @@ jobs:
           --test-reporter-destination=board-junit.xml
           web/src/markdownSafety.test.mjs
 
+      # Desktop shell tests backing the CTRL-64 (Electron renderer hardening)
+      # assertions -> JUnit.
+      - run: npm ci
+        working-directory: desktop
+      - run: >
+          node --test --test-reporter=junit
+          --test-reporter-destination=desktop-junit.xml
+          desktop/mainIpc.test.mjs
+
       # v0.53.1+: the action self-heals the attestation dir — its entrypoint
       # tries .mipiti/attestations under project-root and, when the checkout
       # isn't writable by the container's `verifier` user, falls back to
@@ -67,7 +76,7 @@ jobs:
         with:
           api-key: ${{ secrets.MIPITI_API_KEY }}
           model-id: "71013aa0-a0c7-45dc-9a3d-998196400e4f"
-          junit-report: py-junit.xml board-junit.xml
+          junit-report: py-junit.xml board-junit.xml desktop-junit.xml
           tier2-provider: openai
           tier2-model: ${{ secrets.MIPITI_TIER2_MODEL }}
           tier2-api-key: ${{ secrets.OPENAI_API_KEY }}
