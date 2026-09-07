@@ -41,6 +41,7 @@ jobs:
           tests/test_local_boundary_guard.py tests/test_child_env.py
           tests/test_git.py::test_git_run_never_disables_ssh_host_key_verification
           tests/test_mcp_bridge_schema.py
+          tests/test_sql_injection_safety.py
 
       # Board tests backing the CTRL-36 (markdown XSS) assertions -> JUnit.
       - run: >
