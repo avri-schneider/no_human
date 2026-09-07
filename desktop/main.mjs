@@ -1006,6 +1006,11 @@ async function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // Explicit, not the Electron-version default: the board renders
+      // tracker/CI text from outside the trust boundary, so the renderer runs
+      // sandboxed — matching the setup window. Pinned by a webPreferences
+      // assertion so a future refactor can't silently drop it.
+      sandbox: true,
       preload: path.join(__dirname, "preload.cjs"),
       // The preload is sandboxed and cannot require("./package.json"), so the
       // real app version is handed to it here — the documented channel for

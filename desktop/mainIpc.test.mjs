@@ -209,6 +209,8 @@ test("the renderer stays sandboxed from node", () => {
     "contextIsolation off lets page script reach the preload's scope");
   assert.equal(opts.webPreferences.nodeIntegration, false,
     "nodeIntegration on gives page script require() — full node in the renderer");
+  assert.equal(opts.webPreferences.sandbox, true,
+    "sandbox must be explicit, not the Electron-version default — the renderer runs untrusted tracker/CI text");
   assert.ok(String(opts.webPreferences.preload || "").endsWith("preload.cjs"),
     "the bridge must come from the preload, not the page");
 });
