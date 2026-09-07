@@ -9,6 +9,8 @@ would start accepting unknown structure.
 """
 import inspect
 
+import pytest
+
 from no_human.intake import mcp_bridge
 
 
@@ -39,3 +41,17 @@ def test_mcp_task_tools_take_only_declared_scalar_fields():
             # would fail here).
             want_t = want[p.name]
             assert p.annotation in (want_t, want_t.__name__), (name, p.name, p.annotation)
+
+
+def test_mcp_task_add_rejects_an_unknown_field_at_invocation():
+    """Behavioral: actually invoke task_add with an unexpected field and prove
+    the binding rejects it. Python enforces the typed signature at call time —
+    the unknown kwarg raises TypeError before the body runs, so no task is
+    created — which is what makes an MCP payload's extra fields inert. Exercises
+    the real mechanism, not just its shape."""
+    task_add = _underlying(mcp_bridge.task_add)
+    with pytest.raises(TypeError):
+        task_add(title="t", description="d", repo_path="/tmp/r", injected="evil")
+    task_status = _underlying(mcp_bridge.task_status)
+    with pytest.raises(TypeError):
+        task_status(task_id_or_external_id="T-1", injected="evil")
