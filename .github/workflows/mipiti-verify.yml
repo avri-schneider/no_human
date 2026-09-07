@@ -77,7 +77,7 @@ jobs:
       - uses: Mipiti/mipiti-verify@18824a6a8630b47a02341af9aebb0c7acde1025e # v0.53.1
         with:
           api-key: ${{ secrets.MIPITI_API_KEY }}
-          model-id: "71013aa0-a0c7-45dc-9a3d-998196400e4f"
+          model-id: ${{ vars.MIPITI_MODEL_ID }}
           junit-report: py-junit.xml board-junit.xml desktop-junit.xml
           tier2-provider: openai
           tier2-model: ${{ secrets.MIPITI_TIER2_MODEL }}
