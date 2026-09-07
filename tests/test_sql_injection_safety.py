@@ -119,7 +119,7 @@ class _Spy:
 async def test_all_tracker_writes_bind_sql_injection_payloads(tmp_path):
     # --- drift guard: no write path silently uncovered ------------------- #
     discovered = _write_methods()
-    exercised = set(_HANDLERS)
+    exercised = set(_HANDLERS) | _BODY_EXERCISED
     known = exercised | _ACKNOWLEDGED_NON_WRITERS
     missing = discovered - known
     assert not missing, (
@@ -132,9 +132,30 @@ async def test_all_tracker_writes_bind_sql_injection_payloads(tmp_path):
     spy = _Spy(store._db)
     try:
         ctx: dict = {}
-        # Creates first (they seed ids the rest reference), then the others.
-        order = ["create_task", "create_project", "create_wiki_job",
-                 "create_attempt"]
+
+        # Legible, direct exercise of the two core tracker-text write paths, so
+        # the mechanism a `test_attested` binds to (src/no_human/core/db.py::
+        # add_memory) is plainly invoked and asserted here, not hidden behind
+        # indirection. create_task seeds the task_id the sweep reuses.
+        task = Task.new(SQLI, repo_path="/tmp/r", description=SQLI)
+        task.acceptance_criteria = ["n/a"]
+        await store.create_task(task)
+        ctx["task_id"] = task.id
+        got = await store.get_task(task.id)
+        assert got is not None and got.title == SQLI  # bound, stored verbatim
+
+        # add_memory: a rule whose title AND content are the injection payload
+        # round-trips as literal text — its INSERT bound its parameters.
+        mem_id = await store.add_memory(
+            mem_type="rule", title=SQLI, content=SQLI, confirmed=True)
+        assert mem_id is not None
+        rules = await store.list_memories(confirmed=True)
+        assert any(m["content"] == SQLI for m in rules), "rule content was altered"
+
+        # Sweep the remaining write surface (creates first — they seed ids the
+        # rest reference) so the interceptor guards every path, not just the two
+        # above.
+        order = ["create_project", "create_wiki_job", "create_attempt"]
         order += [n for n in _HANDLERS if n not in order]
         for name in order:
             await _HANDLERS[name](store, ctx)
@@ -150,12 +171,8 @@ async def test_all_tracker_writes_bind_sql_injection_payloads(tmp_path):
         assert any("INSERT" in s.upper() or "UPDATE" in s.upper()
                    for s in spy.statements)
 
-        # (2) Literal round-trip + table survival. A concatenated DROP would
-        # have executed above and made these raise / lose the row.
-        got = await store.get_task(ctx["task_id"])
-        assert got is not None and got.title == SQLI
-        rules = await store.list_memories(confirmed=True)
-        assert any(m["content"] == SQLI for m in rules), "rule content altered"
+        # (2) Table survival: a concatenated DROP in any write above would have
+        # executed and removed a table, making this fail.
         tables = {
             r[0] for r in await store._fetchall(
                 "SELECT name FROM sqlite_master WHERE type='table'")
@@ -174,6 +191,10 @@ async def test_all_tracker_writes_bind_sql_injection_payloads(tmp_path):
 # and (where the value round-trips) is spot-checked above; the interceptor      #
 # guards them all. Registered here so the drift guard sees them as covered.     #
 # --------------------------------------------------------------------------- #
+# create_task and add_memory are exercised directly in the test body (above) so
+# the bound mechanism is legible; the drift guard counts them via this set.
+_BODY_EXERCISED = {"create_task", "add_memory"}
+
 _HANDLERS: dict = {}
 
 
@@ -182,14 +203,6 @@ def _handler(name):
         _HANDLERS[name] = fn
         return fn
     return deco
-
-
-@_handler("create_task")
-async def _(store, ctx):
-    t = Task.new(SQLI, repo_path="/tmp/r", description=SQLI)
-    t.acceptance_criteria = ["n/a"]
-    await store.create_task(t)
-    ctx["task_id"] = t.id
 
 
 @_handler("update_task")
@@ -217,12 +230,6 @@ async def _(store, ctx):
 async def _(store, ctx):
     # A payload as an id must match nothing and drop no table.
     await store.delete_project(SQLI)
-
-
-@_handler("add_memory")
-async def _(store, ctx):
-    ctx["mem_id"] = await store.add_memory(
-        mem_type="rule", title=SQLI, content=SQLI, confirmed=True)
 
 
 @_handler("delete_memory")
