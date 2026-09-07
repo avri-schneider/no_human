@@ -145,3 +145,36 @@ def test_numstat_and_commit_subjects_are_empty_for_an_unresolvable_base(tmp_path
 
     assert repo.numstat("no-such-branch") == []
     assert repo.commit_subjects("no-such-branch") == []
+
+
+def test_git_run_never_disables_ssh_host_key_verification(tmp_path, monkeypatch):
+    """CTRL-17: the git runner must never construct a command or environment
+    that disables SSH host-key verification. It exercises the real command/env
+    the runner hands to subprocess for both a plain (env-inheriting) and a
+    commit-writing (env-rebuilt) call — so the day someone adds
+    ``StrictHostKeyChecking=no``, ``UserKnownHostsFile=/dev/null``, or a
+    weakening ``GIT_SSH_COMMAND``, this fails and the control drops out of
+    verified. Presence of the flags, not OpenSSH's behavior, is what we own."""
+    monkeypatch.delenv("GIT_SSH_COMMAND", raising=False)
+    (tmp_path / ".git").mkdir()
+    seen: list[tuple[list[str], dict]] = []
+
+    def _capture(cmd, **kwargs):
+        seen.append((list(cmd), dict(kwargs.get("env") or {})))
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", _capture)
+    repo = GitRepo(tmp_path)
+    # A git@ (SSH) operation — the case the control is about — and a
+    # commit-writing call, which rebuilds the env.
+    repo._run("fetch", "git@github.com:acme/repo.git", "main", check=False)
+    repo._run("commit", "-m", "x", check=False)
+
+    assert seen, "the git runner never invoked subprocess"
+    for cmd, env in seen:
+        joined = " ".join(cmd)
+        assert "StrictHostKeyChecking=no" not in joined, joined
+        assert "UserKnownHostsFile=/dev/null" not in joined, joined
+        # The runner injects no SSH command of its own — it relies on OpenSSH's
+        # default host-key verification, so it must never set GIT_SSH_COMMAND.
+        assert "GIT_SSH_COMMAND" not in env, env
