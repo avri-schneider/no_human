@@ -2641,6 +2641,36 @@ async def test_responses_carry_a_strict_csp(client):
     assert "connect-src 'self' ws: wss:" in csp
     assert "object-src 'none'" in csp
     assert "frame-ancestors 'none'" in csp
+    # script-src stays strict: the script directive carries no unsafe-inline
+    # (and no unsafe-eval), even though style-src intentionally allows inline
+    # style attributes — so an injected inline <script> cannot execute.
+    script_src = next(d for d in csp.split(";") if d.strip().startswith("script-src"))
+    assert "unsafe-inline" not in script_src
+    assert "unsafe-eval" not in script_src
+
+
+def test_board_html_has_no_inline_scripts_so_script_src_self_needs_no_nonce():
+    """CTRL-20: the board's `script-src 'self'` stays strict — no unsafe-inline,
+    no nonce — precisely because the page loads only EXTERNAL, src-referenced
+    module scripts. There are no inline <script> blocks or inline event-handler
+    attributes that would otherwise force 'unsafe-inline' or a per-response
+    nonce. This guards that: the day someone adds an inline script or an
+    onclick= handler, the build fails, forcing either a nonce mechanism or a
+    move back to an external module — the strict directive can't silently start
+    depending on unsafe-inline."""
+    import pathlib
+    import re
+
+    board_index = pathlib.Path(__file__).resolve().parent.parent / "web" / "index.html"
+    html = board_index.read_text()
+    # The app loads via an external, src-referenced module script.
+    assert re.search(r"<script[^>]*\bsrc=", html), "board must load an external script"
+    # No inline <script> block: a <script ...> tag carrying no src attribute.
+    inline = re.findall(r"<script\b(?![^>]*\bsrc=)[^>]*>", html, re.I)
+    assert not inline, f"inline <script> block(s) found, would need a nonce: {inline}"
+    # No inline event-handler attributes (onclick=, onload=, ...).
+    handlers = re.findall(r"<[^>]*\son[a-z]+\s*=", html, re.I)
+    assert not handlers, f"inline event handler(s) found, would need unsafe-inline: {handlers}"
 
 # The board WebSocket actually routes (PR #107 review found it dead)           #
 # --------------------------------------------------------------------------- #

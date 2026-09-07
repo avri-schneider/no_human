@@ -35,13 +35,23 @@ jobs:
       - run: npm ci
         working-directory: web
 
-      # Python tests backing the CORS/Host/env-scrub assertions -> JUnit.
+      # Python tests backing the behavioral assertions -> JUnit. Each test here
+      # is cited by a test_attested assertion (the runtime/adversarial evidence
+      # the sufficiency judge requires): CORS/Host/env-scrub, SSH host-key,
+      # MCP-schema, SQLi, plus the strict-CSP + clickjacking header test
+      # (CTRL-20/21), the hostile-FTS5 search test (CTRL-45), the human-only
+      # landing gate tests (CTRL-23) and the npm lockfile-pinning guard (CTRL-48).
       - run: >
           uv run pytest -q --junitxml=py-junit.xml
           tests/test_local_boundary_guard.py tests/test_child_env.py
           tests/test_git.py::test_git_run_never_disables_ssh_host_key_verification
           tests/test_mcp_bridge_schema.py
           tests/test_sql_injection_safety.py
+          tests/test_api.py::test_responses_carry_a_strict_csp
+          tests/test_api.py::test_board_html_has_no_inline_scripts_so_script_src_self_needs_no_nonce
+          tests/test_session_search.py::test_hostile_fts_input_never_500s
+          tests/test_gate_at_the_act.py
+          tests/test_npm_lockfile_pinning.py
 
       # Board tests backing the CTRL-36 (markdown XSS) assertions -> JUnit.
       - run: >
