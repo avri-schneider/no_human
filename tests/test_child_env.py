@@ -102,6 +102,9 @@ def test_gh_token_and_dotenv_exported_credentials_are_scrubbed():
     dropped = drop_foreign_secrets(full)
     for name in secrets + ("CLAUDE_CODE_OAUTH_TOKEN",):
         assert name not in full and name in dropped, name
+    # The return value is the exact set of foreign secrets removed — no more
+    # (an operational var wrongly dropped) and no fewer (a secret missed).
+    assert set(dropped) == set(secrets) | {"CLAUDE_CODE_OAUTH_TOKEN"}, dropped
     assert full["PATH"] == "/usr/bin:/bin"
     assert full["OPENAI_API_KEY"] == "sk_codex"
 
