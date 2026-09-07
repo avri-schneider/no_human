@@ -74,7 +74,7 @@ jobs:
       # "implemented" to "verified". The provider key and model name are
       # environment secrets on the `mipiti-verify` environment; the action hands
       # the key only to the OpenAI SDK.
-      - uses: Mipiti/mipiti-verify@18824a6a8630b47a02341af9aebb0c7acde1025e # v0.53.1
+      - uses: Mipiti/mipiti-verify@357102af20759d2eb6b3743c0901cccf83f4649d # v0.53.3
         with:
           api-key: ${{ secrets.MIPITI_API_KEY }}
           model-id: ${{ vars.MIPITI_MODEL_ID }}
