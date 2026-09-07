@@ -50,14 +50,27 @@ case "$MODE" in
     # a machine that is also serving the live queue, and -n auto has wedged
     # this repo before. The other modes are left as they were.
     #
-    # The same three --deselects ci.yml applies, and for a sharper reason here.
-    # KI-1 (docs/KNOWN_ISSUES.md) fails test_two_repos_run_concurrently_in_worktrees
-    # in roughly a third of runs, and that test IS `slow`, so it is in this
-    # lane. scripts/nightly_eval.sh propagates this mode's exit code into its
-    # own verdict, so without these the flake turns the nightly verdict red and
-    # masks the eval signal the lane was added not to mask. The other two are
-    # not `slow` and so collect nothing here; they are listed anyway because
-    # the list that drifts is the list nobody reconciles.
+    # THIS LANE DELIBERATELY DESELECTS ONE MORE TEST THAN ci.yml DOES, and the
+    # difference is temporary. Keep the two lists in step apart from this entry;
+    # tests/test_deselect_lists_agree.py enforces that and names this exception.
+    #
+    # KI-1 (docs/KNOWN_ISSUES.md) used to fail
+    # test_two_repos_run_concurrently_in_worktrees in roughly a third of runs.
+    # It was re-measured on 2026-09-06 after the serialized_write lock at 0
+    # failures in 400 serial runs and 13 whole-suite -n 4 runs, so ci.yml
+    # selects it again. It stays deselected HERE because this lane is the one
+    # with teeth: scripts/nightly_eval.sh propagates this mode's exit code into
+    # its own verdict ("Exit code IS the verdict", its header), so a residual
+    # rate that CI would show as one red job would instead redden the nightly
+    # verdict and mask the eval signal. The measurement bounds the residual near
+    # 1%, not at zero, so this waits for push-to-main history rather than for a
+    # better number.
+    #
+    # REMOVE THIS DESELECT once main has run it clean for a while; that is a
+    # one-line change here plus deleting the entry from the test above.
+    #
+    # The other two are not `slow` and so collect nothing here; they are listed
+    # anyway because the list that drifts is the list nobody reconciles.
     echo "=== Running the nightly lane (slow or nightly) ==="
     uv run pytest -q --tb=short -n 4 -m "slow or nightly" \
       --deselect tests/test_scheduler.py::test_reanalysis_maybe_run_produces_result \
