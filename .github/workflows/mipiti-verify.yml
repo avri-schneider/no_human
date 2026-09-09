@@ -83,18 +83,27 @@ jobs:
       # MIPITI_ATTESTATION_DIR under the container home (PR 389). No pre-create
       # step is needed.
       #
-      # Gate revision 3: a runtime-class control whose only evidence is a
-      # test_attested citation is insufficient unless a structural sibling for
-      # the same mechanism also passes on that control. This version carries the
-      # catalogue awareness that check needs, and closes the --changed-files skip
-      # (#385). It signs a test attestation from the JUnit reports, then verifies
-      # (Tier 1 + Tier 2). It runs no tests itself.
+      # Gate revision 4 (v0.55.x): the sufficiency gate is quantifier-aware. A
+      # universal runtime clause ("all"/"every"/"no X anywhere") is a forall
+      # property that a sampled behavioral test cannot establish however strong
+      # its reach/dependence; it is credited only from WHOLE-SCOPE evidence. This
+      # release ships the two sound whole-scope assertion types that supply it:
+      # `sink_default_deny` (over every site of a declared sink in scope, only a
+      # form the safe-forms vocabulary admits, else a reviewed allowlist entry —
+      # over-approximating, so an unclassifiable/reflection/dynamic site is a
+      # violation) and `typed_boundary` (every sink position takes a value from a
+      # declared constructor built only from literals/named constants — the
+      # by-construction guarantee). The judge is also now shown each behavioral
+      # assertion's mechanical reach/dependence facts as authoritative, so it no
+      # longer re-decides invocation from source text. It signs a test
+      # attestation from the JUnit reports (with per-test coverage below), then
+      # verifies (Tier 1 + Tier 2). It runs no tests itself.
       #
       # Tier 2 is the semantic check that moves a sufficient control from
       # "implemented" to "verified". The provider key and model name are
       # environment secrets on the `mipiti-verify` environment; the action hands
       # the key only to the OpenAI SDK.
-      - uses: Mipiti/mipiti-verify@357102af20759d2eb6b3743c0901cccf83f4649d # v0.53.3
+      - uses: Mipiti/mipiti-verify@b2c974e3a2fa8611ae07ae12e7025aa14e97f55c # v0.55.2
         with:
           api-key: ${{ secrets.MIPITI_API_KEY }}
           model-id: ${{ vars.MIPITI_MODEL_ID }}
