@@ -103,7 +103,12 @@ jobs:
       # "implemented" to "verified". The provider key and model name are
       # environment secrets on the `mipiti-verify` environment; the action hands
       # the key only to the OpenAI SDK.
-      - uses: Mipiti/mipiti-verify@b2c974e3a2fa8611ae07ae12e7025aa14e97f55c # v0.55.2
+      # v0.55.3 patch: two Tier-2 verdict-stability fixes — a verdict is keyed on
+      # the evidence content, not on where it sits in a file (a refactor that
+      # moves code no longer re-judges), and a verdict whose judgments disagreed
+      # is kept rather than re-asked next run. Both target the BORDERLINE/QUALITY
+      # flicker seen on the pattern_matches / test_attested assertions.
+      - uses: Mipiti/mipiti-verify@31ed139153124f2669f412521827e39988823950 # v0.55.3
         with:
           api-key: ${{ secrets.MIPITI_API_KEY }}
           model-id: ${{ vars.MIPITI_MODEL_ID }}
